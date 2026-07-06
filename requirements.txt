@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+bilibili-api-python
+faster-whisper
+transformers
+torch
+pillow
+requests
+python-dotenv

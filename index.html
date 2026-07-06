@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>B站视频智能总结</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1100px;
+            margin: 30px auto;
+            padding: 20px;
+            background: #f7f9fc;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h1 { color: #1a1a2e; margin-bottom: 8px; }
+        .subtitle { color: #666; font-size: 14px; margin-bottom: 24px; }
+        .config-panel {
+            background: #f5f7fb;
+            border-radius: 10px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px 24px;
+            align-items: center;
+        }
+        .config-panel label {
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .config-panel select, .config-panel input[type="text"] {
+            padding: 4px 8px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .config-panel input[type="text"] { min-width: 200px; }
+        .fast-mode {
+            background: #e8f5e9;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .input-group input {
+            flex: 1;
+            padding: 10px 16px;
+            border: 1px solid #d0d7de;
+            border-radius: 8px;
+            font-size: 15px;
+            min-width: 200px;
+        }
+        .btn {
+            background: #6c63ff;
+            color: white;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .btn:hover { background: #5a52d5; }
+        .btn:disabled {
+            background: #b0b0b0;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: #e8e8e8;
+            color: #333;
+        }
+        .btn-secondary:hover { background: #d0d0d0; }
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-danger:hover { background: #c82333; }
+        .parts-list {
+            margin: 16px 0;
+            padding: 12px 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            max-height: 350px;
+            overflow-y: auto;
+        }
+        .part-item {
+            display: flex;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .part-item:last-child { border-bottom: none; }
+        .part-item input[type="checkbox"] { margin-right: 12px; transform: scale(1.1); }
+        .part-item .title { flex: 1; }
+        .part-item .duration { color: #888; font-size: 13px; margin-left: 10px; }
+        .part-item .status-downloaded { color: #28a745; font-size: 13px; margin-left: 10px; }
+        .message { margin-top: 12px; padding: 8px 12px; border-radius: 6px; }
+        .message.info { background: #e3f2fd; color: #0d47a1; }
+        .message.success { background: #e8f5e9; color: #1b5e20; }
+        .message.error { background: #ffebee; color: #b71c1c; }
+        .status-bar {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            background: #f0f2f5;
+            display: none;
+        }
+        .status-bar.active { display: block; }
+        .progress {
+            height: 6px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: #6c63ff;
+            transition: width 0.5s;
+        }
+        .note-result {
+            margin-top: 24px;
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 8px;
+            border-left: 4px solid #6c63ff;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.8;
+            display: none;
+        }
+        .note-result.show { display: block; }
+        .error-msg {
+            color: #dc3545;
+            background: #ffe6e6;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 12px;
+            display: none;
+        }
+        .chat-area {
+            margin-top: 20px;
+            display: none;
+        }
+        .chat-area.active { display: block; }
+        .chat-area input {
+            width: 70%;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .chat-area .btn { margin-left: 8px; }
+        .chat-history {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .history-area {
+            margin-top: 40px;
+            border-top: 2px solid #eee;
+            padding-top: 20px;
+        }
+        .history-item {
+            border-bottom: 1px solid #eee;
+            padding: 10px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .history-item .info { flex: 1; }
+        .history-item .info .name { font-weight: 500; }
+        .history-item .info .time { font-size: 12px; color: #888; }
+        .history-item .info .summary { font-size: 13px; color: #555; margin-top: 4px; }
+        .history-item .actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .history-item .actions label {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .note-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .note-tab {
+            padding: 6px 16px;
+            background: #e8e8e8;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            border: none;
+            transition: 0.2s;
+        }
+        .note-tab.active {
+            background: #6c63ff;
+            color: white;
+        }
+        .note-tab:hover:not(.active) { background: #d0d0d0; }
+        .note-content {
+            display: none;
+            white-space: pre-wrap;
+            padding: 16px 20px;
+            background: #fafafa;
+            border-radius: 8px;
+            border-left: 4px solid #6c63ff;
+            line-height: 1.8;
+        }
+        .note-content.active { display: block; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🎬 B站视频智能总结</h1>
+    <div class="subtitle">输入BV号，获取分P列表，勾选下载并生成笔记</div>
+
+    <!-- ========== 配置面板 ========== -->
+    <div class="config-panel" id="configPanel">
+        <label>📝 模板：
+            <select id="templateSelect">
+                <option value="通用">通用</option>
+                <option value="课程笔记">课程笔记</option>
+                <option value="会议纪要">会议纪要</option>
+                <option value="科普解读">科普解读</option>
+                <option value="学术分析">学术分析</option>
+            </select>
+        </label>
+        <label><input type="checkbox" id="reflectionCheck" checked> 反思机制</label>
+        <label><input type="checkbox" id="toolsCheck" checked> 工具调用</label>
+        <label class="fast-mode"><input type="checkbox" id="fastModeCheck" checked> ⚡ 快速模式</label>
+        <label>✏️ 自定义提示词：
+            <input type="text" id="customPromptInput" placeholder="例如：重点分析案例" style="min-width:180px;">
+        </label>
+    </div>
+
+    <!-- BV操作区 -->
+    <div class="input-group">
+        <input type="text" id="bvidInput" placeholder="请输入BV号，例如 BV1jE421A7qK" />
+        <button class="btn" id="fetchPartsBtn">📋 获取分P列表</button>
+    </div>
+
+    <div id="partsContainer" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin:8px 0;">
+            <span><strong>分P列表</strong>（勾选后点击下载）</span>
+            <div>
+                <button class="btn btn-secondary" id="downloadSelectedBtn" style="margin-right:8px;">📥 下载选中</button>
+                <button class="btn btn-secondary" id="processDownloadedBtn">⚡ 解析已下载</button>
+            </div>
+        </div>
+        <div class="parts-list" id="partsList"></div>
+        <div id="messageArea"></div>
+    </div>
+
+    <!-- 状态、进度 -->
+    <div class="status-bar" id="statusBar">
+        <div id="statusText">⏳ 正在处理...</div>
+        <div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+
+    <!-- 笔记展示区 -->
+    <div id="noteDisplayArea" style="display:none;">
+        <div class="note-tabs" id="noteTabs"></div>
+        <div id="noteContents"></div>
+    </div>
+
+    <!-- 多轮对话 -->
+    <div class="chat-area" id="chatArea">
+        <div style="font-weight:500; margin-bottom:6px;">💬 多轮对话：</div>
+        <input type="text" id="chatInput" placeholder="输入修改意见" />
+        <button class="btn" id="chatSendBtn">发送</button>
+        <div class="chat-history" id="chatHistory"></div>
+    </div>
+
+    <!-- 历史记录 -->
+    <div class="history-area">
+        <h3>📚 历史笔记</h3>
+        <div id="historyList"><div style="color:#888;">加载中...</div></div>
+    </div>
+</div>
+
+<script>
+    // ====== 偏好记忆 ======
+    function loadPrefs() {
+        const prefs = JSON.parse(localStorage.getItem('bili_prefs') || '{}');
+        if (prefs.template) document.getElementById('templateSelect').value = prefs.template;
+        if (prefs.reflection !== undefined) document.getElementById('reflectionCheck').checked = prefs.reflection;
+        if (prefs.tools !== undefined) document.getElementById('toolsCheck').checked = prefs.tools;
+        if (prefs.fastMode !== undefined) document.getElementById('fastModeCheck').checked = prefs.fastMode;
+        if (prefs.customPrompt) document.getElementById('customPromptInput').value = prefs.customPrompt;
+    }
+    function savePrefs() {
+        const prefs = {
+            template: document.getElementById('templateSelect').value,
+            reflection: document.getElementById('reflectionCheck').checked,
+            tools: document.getElementById('toolsCheck').checked,
+            fastMode: document.getElementById('fastModeCheck').checked,
+            customPrompt: document.getElementById('customPromptInput').value
+        };
+        localStorage.setItem('bili_prefs', JSON.stringify(prefs));
+    }
+    document.querySelectorAll('#configPanel select, #configPanel input').forEach(el => {
+        el.addEventListener('change', savePrefs);
+        if (el.tagName === 'INPUT' && el.type === 'text') el.addEventListener('input', savePrefs);
+    });
+    loadPrefs();
+
+    // ====== 全局变量 ======
+    let currentParts = [];
+    let downloadedVideos = [];
+    let allNotes = [];
+    let currentNoteIndex = 0;
+    let currentNoteForChat = '';
+
+    // ====== DOM 引用 ======
+    const bvidInput = document.getElementById('bvidInput');
+    const fetchPartsBtn = document.getElementById('fetchPartsBtn');
+    const partsList = document.getElementById('partsList');
+    const partsContainer = document.getElementById('partsContainer');
+    const downloadSelectedBtn = document.getElementById('downloadSelectedBtn');
+    const processDownloadedBtn = document.getElementById('processDownloadedBtn');
+    const statusBar = document.getElementById('statusBar');
+    const statusText = document.getElementById('statusText');
+    const progressBar = document.getElementById('progressBar');
+    const errorMsg = document.getElementById('errorMsg');
+    const messageArea = document.getElementById('messageArea');
+    const noteDisplayArea = document.getElementById('noteDisplayArea');
+    const noteTabs = document.getElementById('noteTabs');
+    const noteContents = document.getElementById('noteContents');
+    const chatArea = document.getElementById('chatArea');
+    const chatInput = document.getElementById('chatInput');
+    const chatSendBtn = document.getElementById('chatSendBtn');
+    const chatHistory = document.getElementById('chatHistory');
+    const historyList = document.getElementById('historyList');
+
+    function showMessage(text, type = 'info') {
+        const cls = type === 'error' ? 'error' : (type === 'success' ? 'success' : 'info');
+        messageArea.innerHTML = `<div class="message ${cls}">${text}</div>`;
+    }
+    function clearMessage() { messageArea.innerHTML = ''; }
+
+    // ====== 获取分P ======
+    fetchPartsBtn.addEventListener('click', async () => {
+        const bvid = bvidInput.value.trim();
+        if (!bvid) { showMessage('⚠️ 请输入BV号', 'error'); return; }
+        clearMessage();
+        errorMsg.style.display = 'none';
+        noteDisplayArea.style.display = 'none';
+        chatArea.classList.remove('active');
+        partsList.innerHTML = '<div>⏳ 获取中...</div>';
+        partsContainer.style.display = 'block';
+        try {
+            const resp = await fetch(`http://127.0.0.1:8000/video_info?bvid=${bvid}`);
+            const data = await resp.json();
+            if (data.status === 'success') {
+                currentParts = data.parts.map(p => ({ ...p, downloaded: false }));
+                renderParts();
+                showMessage(`✅ 获取到 ${currentParts.length} 个分P`, 'success');
+            } else {
+                partsList.innerHTML = '<div>❌ 获取失败</div>';
+                showMessage(`❌ ${data.detail || '未知错误'}`, 'error');
+            }
+        } catch {
+            partsList.innerHTML = '<div>❌ 网络错误</div>';
+            showMessage('❌ 无法连接后端服务', 'error');
+        }
+    });
+
+    function renderParts() {
+        let html = '';
+        currentParts.forEach((p, idx) => {
+            const checked = p.downloaded ? 'checked' : '';
+            const downloadedLabel = p.downloaded ? '<span class="status-downloaded">✅ 已下载</span>' : '';
+            html += `
+                <div class="part-item">
+                    <input type="checkbox" data-idx="${idx}" ${checked} />
+                    <span class="title">P${p.index}: ${p.title}</span>
+                    <span class="duration">${p.duration}s</span>
+                    ${downloadedLabel}
+                </div>
+            `;
+        });
+        partsList.innerHTML = html;
+    }
+
+    // ====== 下载选中 ======
+    downloadSelectedBtn.addEventListener('click', async () => {
+        const bvid = bvidInput.value.trim();
+        if (!bvid) { showMessage('⚠️ 请先输入BV号', 'error'); return; }
+        const checkboxes = partsList.querySelectorAll('input[type="checkbox"]');
+        const selectedIndices = [];
+        checkboxes.forEach((cb, idx) => {
+            if (cb.checked && !currentParts[idx].downloaded) {
+                selectedIndices.push(currentParts[idx].index);
+            }
+        });
+        if (selectedIndices.length === 0) {
+            showMessage('⚠️ 请勾选未下载的分P', 'error');
+            return;
+        }
+        downloadSelectedBtn.disabled = true;
+        downloadSelectedBtn.textContent = '⏳ 下载中...';
+        statusBar.classList.add('active');
+        statusText.textContent = `⏳ 正在下载 ${selectedIndices.length} 个分P...`;
+        progressBar.style.width = '0%';
+
+        try {
+            const resp = await fetch('http://127.0.0.1:8000/download', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bvid, parts: selectedIndices })
+            });
+            const data = await resp.json();
+            if (data && data.status === 'success') {
+                selectedIndices.forEach((pIdx) => {
+                    const part = currentParts.find(p => p.index === pIdx);
+                    if (part) part.downloaded = true;
+                });
+                downloadedVideos = data.video_paths || [];
+                renderParts();
+                statusText.textContent = `✅ 下载完成！共 ${downloadedVideos.length} 个文件`;
+                progressBar.style.width = '100%';
+                showMessage('✅ 下载完成，可点击“解析已下载”', 'success');
+                processDownloadedBtn.disabled = false;
+            } else {
+                throw new Error(data?.detail || '下载失败');
+            }
+        } catch (err) {
+            errorMsg.textContent = '❌ ' + err.message;
+            errorMsg.style.display = 'block';
+            showMessage(`❌ ${err.message}`, 'error');
+        } finally {
+            downloadSelectedBtn.disabled = false;
+            downloadSelectedBtn.textContent = '📥 下载选中';
+            setTimeout(() => statusBar.classList.remove('active'), 2000);
+        }
+    });
+
+    // ====== 解析已下载（支持快速模式） ======
+    processDownloadedBtn.addEventListener('click', async () => {
+        if (downloadedVideos.length === 0) {
+            showMessage('⚠️ 请先下载视频', 'error');
+            return;
+        }
+        const template = document.getElementById('templateSelect').value;
+        const reflection = document.getElementById('reflectionCheck').checked;
+        const tools = document.getElementById('toolsCheck').checked;
+        const customPrompt = document.getElementById('customPromptInput').value;
+        const fastMode = document.getElementById('fastModeCheck').checked;
+
+        statusBar.classList.add('active');
+        statusText.textContent = `⏳ 正在解析 ${downloadedVideos.length} 个视频...`;
+        progressBar.style.width = '30%';
+        noteDisplayArea.style.display = 'none';
+        chatArea.classList.remove('active');
+
+        try {
+            const resp = await fetch('http://127.0.0.1:8000/process', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    video_paths: downloadedVideos,
+                    bvid: bvidInput.value.trim(),
+                    template,
+                    enable_reflection: fastMode ? false : reflection,
+                    enable_tools: fastMode ? false : tools,
+                    custom_prompt: customPrompt,
+                    fast_mode: fastMode
+                })
+            });
+            const data = await resp.json();
+            if (data && data.results) {
+                allNotes = [];
+                for (const [path, result] of Object.entries(data.results)) {
+                    if (result && result.status === 'success') {
+                        allNotes.push({ path, note: result.note || '（空笔记）', work_dir: result.work_dir });
+                    } else {
+                        allNotes.push({ path, note: `❌ 解析失败: ${result?.note || '未知错误'}`, work_dir: null });
+                    }
+                }
+                renderNoteTabs();
+                noteDisplayArea.style.display = 'block';
+                statusText.textContent = '✅ 解析完成';
+                progressBar.style.width = '100%';
+                showMessage('✅ 全部解析完成', 'success');
+                chatArea.classList.add('active');
+                chatHistory.innerHTML = '';
+                loadHistory();
+            } else {
+                throw new Error(data?.detail || '解析返回数据异常');
+            }
+        } catch (err) {
+            errorMsg.textContent = '❌ ' + err.message;
+            errorMsg.style.display = 'block';
+        } finally {
+            setTimeout(() => statusBar.classList.remove('active'), 2000);
+        }
+    });
+
+    // ====== 渲染分P标签（使用索引） ======
+    function renderNoteTabs() {
+        if (allNotes.length === 0) return;
+        let tabsHtml = '', contentsHtml = '';
+        allNotes.forEach((item, idx) => {
+            const fileName = item.path.split(/[\\/]/).pop() || `P${idx+1}`;
+            const active = idx === 0 ? 'active' : '';
+            tabsHtml += `<button class="note-tab ${active}" data-index="${idx}">${fileName}</button>`;
+            contentsHtml += `<div class="note-content ${active}" data-index="${idx}">${item.note}</div>`;
+        });
+        noteTabs.innerHTML = tabsHtml;
+        noteContents.innerHTML = contentsHtml;
+
+        currentNoteIndex = 0;
+        if (allNotes.length > 0) {
+            currentNoteForChat = allNotes[0].note;
+        }
+        // 绑定切换事件
+        document.querySelectorAll('.note-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                const idx = parseInt(this.dataset.index);
+                document.querySelectorAll('.note-tab').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                document.querySelectorAll('.note-content').forEach(c => c.classList.remove('active'));
+                const target = document.querySelector(`.note-content[data-index="${idx}"]`);
+                if (target) target.classList.add('active');
+                if (allNotes[idx]) {
+                    currentNoteForChat = allNotes[idx].note;
+                    currentNoteIndex = idx;
+                }
+            });
+        });
+    }
+
+    // ====== 多轮对话 ======
+    chatSendBtn.addEventListener('click', async () => {
+        const feedback = chatInput.value.trim();
+        if (!feedback) return;
+        if (!currentNoteForChat) {
+            chatHistory.innerHTML += `<div>⚠️ 请先生成笔记。</div>`;
+            return;
+        }
+        chatInput.disabled = true;
+        chatSendBtn.disabled = true;
+        chatHistory.innerHTML += `<div><strong>你：</strong>${feedback}</div>`;
+
+        try {
+            const resp = await fetch('http://127.0.0.1:8000/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    context: currentNoteForChat,
+                    current_note: currentNoteForChat,
+                    user_feedback: feedback,
+                    template: document.getElementById('templateSelect').value,
+                    custom_prompt: document.getElementById('customPromptInput').value,
+                    enable_tools: document.getElementById('toolsCheck').checked,
+                    enable_reflection: document.getElementById('reflectionCheck').checked
+                })
+            });
+            const data = await resp.json();
+            if (data && data.new_note) {
+                currentNoteForChat = data.new_note;
+                const activeTab = document.querySelector('.note-tab.active');
+                if (activeTab) {
+                    const idx = parseInt(activeTab.dataset.index);
+                    if (allNotes[idx]) {
+                        allNotes[idx].note = data.new_note;
+                        const contentDiv = document.querySelector(`.note-content[data-index="${idx}"]`);
+                        if (contentDiv) contentDiv.textContent = data.new_note;
+                    }
+                }
+                chatHistory.innerHTML += `<div><strong>AI：</strong>笔记已更新。</div>`;
+            } else {
+                chatHistory.innerHTML += `<div style="color:red;">❌ 修改失败</div>`;
+            }
+        } catch (err) {
+            chatHistory.innerHTML += `<div style="color:red;">❌ 请求失败: ${err.message}</div>`;
+        } finally {
+            chatInput.disabled = false;
+            chatSendBtn.disabled = false;
+            chatInput.value = '';
+            chatInput.focus();
+        }
+    });
+
+    // ====== 历史记录（使用 id 删除） ======
+    async function loadHistory() {
+        try {
+            const resp = await fetch('http://127.0.0.1:8000/history');
+            const data = await resp.json();
+            if (data && data.history && data.history.length > 0) {
+                let html = '';
+                data.history.forEach(item => {
+                    const videoName = item.video_name || '未知视频';
+                    const workDir = item.work_dir || '';
+                    html += `
+                        <div class="history-item" data-id="${item.id}" data-workdir="${workDir}">
+                            <div class="info">
+                                <div class="name">${videoName}</div>
+                                <div class="time">${item.time || ''}</div>
+                                <div class="summary">${item.summary || '无摘要'}</div>
+                            </div>
+                            <div class="actions">
+                                <label><input type="checkbox" class="delete-video-check" ${workDir ? '' : 'disabled'} /> 删视频</label>
+                                <button class="btn-danger delete-note-btn" data-id="${item.id}" data-workdir="${workDir}" ${workDir ? '' : 'disabled'}>删除</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                historyList.innerHTML = html;
+            } else {
+                historyList.innerHTML = '<div style="color:#888;">暂无历史记录</div>';
+            }
+        } catch (err) {
+            historyList.innerHTML = '<div style="color:#888;">加载失败</div>';
+        }
+    }
+
+    // ====== 事件委托：删除按钮（通过 id） ======
+    historyList.addEventListener('click', async function(e) {
+        const btn = e.target.closest('.delete-note-btn');
+        if (!btn) return;
+        if (btn.disabled) return;
+        const id = parseInt(btn.dataset.id);
+        if (!id) {
+            alert('❌ 无效的记录 ID');
+            return;
+        }
+        const row = btn.closest('.history-item');
+        const checkbox = row ? row.querySelector('.delete-video-check') : null;
+        const deleteVideo = checkbox ? checkbox.checked : false;
+
+        if (!confirm(`确定要删除此笔记${deleteVideo ? '及原视频' : ''}吗？`)) return;
+
+        try {
+            const resp = await fetch('http://127.0.0.1:8000/delete_note', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id, delete_video: deleteVideo })
+            });
+            const data = await resp.json();
+            if (data && data.status === 'success') {
+                alert('✅ 删除成功');
+                loadHistory(); // 刷新列表
+            } else {
+                alert('❌ 删除失败: ' + (data?.detail || '未知错误'));
+            }
+        } catch (err) {
+            alert('❌ 请求失败: ' + err.message);
+        }
+    });
+
+    // ====== 首次加载历史 ======
+    loadHistory();
+</script>
+</body>
+</html>
